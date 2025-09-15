@@ -3,7 +3,7 @@
 
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import torch
 from torch import nn
@@ -28,9 +28,21 @@ class ScorerPress(BasePress):
     """
 
     compression_ratio: float = 0.0
+    position_scores_by_layer: dict[int, torch.Tensor] = field(
+        default_factory=dict, init=False
+    )
+    kept_indices_by_layer: dict[int, torch.Tensor] = field(
+        default_factory=dict, init=False
+    )
+
+    def clear_analysis(self):
+        self.position_scores_by_layer.clear()
+        self.kept_indices_by_layer.clear()
 
     def __post_init__(self):
-        assert 0 <= self.compression_ratio < 1, "Compression ratio must be between 0 and 1"
+        assert 0 <= self.compression_ratio < 1, (
+            "Compression ratio must be between 0 and 1"
+        )
 
     def score(
         self,
@@ -82,7 +94,6 @@ class ScorerPress(BasePress):
         attentions: torch.Tensor,
         kwargs: dict,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-
         if self.compression_ratio == 0:
             return keys, values
 
@@ -93,6 +104,18 @@ class ScorerPress(BasePress):
         q_len = hidden_states.shape[1]
         n_kept = int(q_len * (1 - self.compression_ratio))
         indices = scores.topk(n_kept, dim=-1).indices
+
+        # Save raw per-position scores and kept indices for analysis
+        try:
+            self.position_scores_by_layer[module.layer_idx] = (
+                scores.detach().cpu()
+            )  # (B, H, L)
+            self.kept_indices_by_layer[module.layer_idx] = (
+                indices.detach().cpu()
+            )  # (B, H, L') where L' is the pruned length
+        except Exception:
+            pass
+
         indices = indices.unsqueeze(-1).expand(-1, -1, -1, module.head_dim)
 
         # Prune keys and values
