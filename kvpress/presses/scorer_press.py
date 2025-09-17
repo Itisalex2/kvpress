@@ -34,6 +34,7 @@ class ScorerPress(BasePress):
     kept_indices_by_layer: dict[int, torch.Tensor] = field(
         default_factory=dict, init=False
     )
+    force_keep_global: torch.Tensor | None = None
 
     def clear_analysis(self):
         self.position_scores_by_layer.clear()
@@ -104,6 +105,32 @@ class ScorerPress(BasePress):
         q_len = hidden_states.shape[1]
         n_kept = int(q_len * (1 - self.compression_ratio))
         indices = scores.topk(n_kept, dim=-1).indices
+
+        # Force keeping certain indices, if specified
+        if self.force_keep_global is not None and self.force_keep_global.numel() > 0:
+            forced = self.force_keep_global.to(
+                scores.device, dtype=torch.long, non_blocking=True
+            ).unique()
+            if not (forced.ge(0).all() and forced.lt(q_len).all()):
+                raise ValueError(
+                    f"Forced indices {forced.tolist()} out of range [0, {q_len})"
+                )
+            forced_cnt = int(forced.numel())
+
+            if forced_cnt > n_kept:
+                raise ValueError(
+                    f"Cannot force keep {forced_cnt} positions when only {n_kept} can be kept"
+                )
+
+            k_rest = n_kept - forced_cnt
+            # Exclude forced positions from the candidate pool
+            masked_scores = scores.clone()
+            masked_scores[:, :, forced] = float("-inf")
+            rest = masked_scores.topk(k_rest, dim=-1).indices  # (B, H, k_rest)
+            forced_expanded = forced.view(1, 1, -1).expand(
+                scores.size(0), scores.size(1), -1
+            )  # (B, H, forced_cnt)
+            indices = torch.cat([forced_expanded, rest], dim=-1)  # (B, H, n_kept)
 
         # Save raw per-position scores and kept indices for analysis
         try:

@@ -48,7 +48,12 @@ class StreamingLLMPress(ScorerPress):
             f"Input should contain more tokens than n_sink={self.n_sink}"
         )
         n_pruned = q_len - int(q_len * (1 - self.compression_ratio))
-        scores = torch.ones_like(keys[..., 0])
-        scores[:, :, self.n_sink : self.n_sink + n_pruned] = 0
+        scores = torch.zeros_like(keys[..., 0])
+        scores[:, :, : self.n_sink] = 1.0
+        tail_kept_index_start = self.n_sink + n_pruned
+        ramp = torch.linspace(0.1, 0.9, q_len - tail_kept_index_start).to(scores.device)
+        scores[:, :, tail_kept_index_start:] = ramp.view(
+            1, 1, q_len - tail_kept_index_start
+        )
 
         return scores
