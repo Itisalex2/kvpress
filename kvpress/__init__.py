@@ -35,6 +35,7 @@ from kvpress.presses.observed_attention_system_prompt_press import (
     ObservedAttentionSystemPromptPress,
 )
 from kvpress.presses.snapkv_system_prompt_press import SnapKVSystemPromptPress
+from kvpress.presses.snapkv_fair_eviction_press import SnapKVFairEvictionPress
 from kvpress.presses.streaming_llm_system_prompt_press import (
     StreamingLLMSystemPromptPress,
 )
@@ -77,6 +78,7 @@ __all__ = [
     "ExpectedAttentionStatsPress",
     "ObservedAttentionSystemPromptPress",
     "SnapKVSystemPromptPress",
+    "SnapKVFairEvictionPress",
     "StreamingLLMSystemPromptPress",
     "StreamingLLMFairEvictionPress",
 ]
