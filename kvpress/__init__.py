@@ -35,6 +35,9 @@ from kvpress.presses.tova_press import TOVAPress
 from kvpress.presses.observed_attention_system_prompt_press import (
     ObservedAttentionSystemPromptPress,
 )
+from kvpress.presses.observed_attention_fair_eviction_press import (
+    ObservedAttentionFairEvictionPress,
+)
 from kvpress.presses.snapkv_system_prompt_press import SnapKVSystemPromptPress
 from kvpress.presses.snapkv_fair_eviction_press import SnapKVFairEvictionPress
 from kvpress.presses.streaming_llm_system_prompt_press import (
@@ -78,6 +81,7 @@ __all__ = [
     "KVzipPress",
     "ExpectedAttentionStatsPress",
     "ObservedAttentionSystemPromptPress",
+    "ObservedAttentionFairEvictionPress",
     "SnapKVSystemPromptPress",
     "SnapKVFairEvictionPress",
     "StreamingLLMSystemPromptPress",
