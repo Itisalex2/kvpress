@@ -15,14 +15,11 @@ class StreamingLLMFairEvictionPress(StreamingLLMPress):
     We treat the defense span and the system-instruction span as two adjacent windows, and
     compress/rank them separately in a StreamingLLM-like fashion, then merge.
 
-    Ownership of sinks:
-    - The span that appears FIRST in the sequence owns the prefix sink (first n_sink tokens at index 0).
-    - The span that appears LAST in the sequence owns the suffix sink placed at the START of the later span
-      (i.e., positions [later_span_start : later_span_start + n_sink]).
+    Sinks:
+    - ONLY a prefix sink: first n_sink tokens at index 0 are set to score 1.0.
 
     Explanation of scores (this method):
     - Sink tokens (first n_sink, owned by the earlier span): score 1.0
-    - Sink tokens (n_sink tokens starting at later_span_start, owned by the later span): score 1.0
     - Defense span (expanded to its owned side): linearly increasing scores from 0.1 to 0.9
     - System instruction span (expanded to its owned side): linearly increasing scores from 0.1 to 0.9
 
@@ -59,9 +56,8 @@ class StreamingLLMFairEvictionPress(StreamingLLMPress):
         q_len = hidden_states.shape[1]
         assert self.defense_span is not None, "defense_span must be set"
         assert self.sys_instr_span is not None, "sys_instr_span must be set"
-        assert q_len > 0, "Empty sequence"
-        assert 0 < self.n_sink < q_len, (
-            f"n_sink must be in (0, q_len); got {self.n_sink} for q_len={q_len}"
+        assert q_len > self.n_sink, (
+            f"Input should contain more tokens than n_sink={self.n_sink}"
         )
 
         scores = torch.zeros_like(keys[..., 0])  # (batch, heads, q_len)
@@ -74,9 +70,6 @@ class StreamingLLMFairEvictionPress(StreamingLLMPress):
             (sys_instr_span_start, sys_instr_span_end, "sys_instr_span"),
         ]:
             assert 0 <= s <= e <= q_len, f"Invalid {name} {s, e} for q_len={q_len}"
-        assert q_len >= 2 * self.n_sink, (
-            f"Sequence length {q_len} should be at least 2*n_sink={2 * self.n_sink}"
-        )
 
         # Enforce adjacency & determine order (no overlap, exactly touching)
         # Accept either defense first or system-instruction first.
@@ -110,15 +103,10 @@ class StreamingLLMFairEvictionPress(StreamingLLMPress):
         # Earlier region
         self._apply_ramp(scores, self.n_sink, earlier_span_end)
         # Later region
-        self._apply_ramp(scores, later_span_start + self.n_sink, q_len)
+        self._apply_ramp(scores, later_span_start, q_len)
 
         # Now set sinks to 1.0, overriding ramps where they overlap.
         prefix_end = min(self.n_sink, q_len)
         scores[:, :, :prefix_end] = 1.0
-
-        # Suffix sink belongs to the later span.
-        suffix_end = min(later_span_start + self.n_sink, q_len)
-        if later_span_start < suffix_end:
-            scores[:, :, later_span_start:suffix_end] = 1.0
 
         return scores
