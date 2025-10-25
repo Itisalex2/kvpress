@@ -47,6 +47,7 @@ from kvpress.presses.streaming_llm_system_prompt_press import (
 from kvpress.presses.streamingllm_fair_eviction_press import (
     StreamingLLMFairEvictionPress,
 )
+from kvpress.presses.expected_eviction_press import ExpectedEvictionPress
 
 # Patch the attention functions to support head-wise compression
 patch_attention_functions()
@@ -89,4 +90,5 @@ __all__ = [
     "StreamingLLMFairEvictionPress",
     "KnormFairEvictionPress",
     "TOVAFairEvictionPress",
+    "ExpectedEvictionPress",
 ]
