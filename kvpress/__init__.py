@@ -48,6 +48,7 @@ from kvpress.presses.streamingllm_fair_eviction_press import (
     StreamingLLMFairEvictionPress,
 )
 from kvpress.presses.streaming_llm_interpolate_press import StreamingLLMInterpolatePress
+from kvpress.presses.snapkv_interpolate_press import SnapKVLLMInterpolatePress
 from kvpress.presses.expected_eviction_press import ExpectedEvictionPress
 
 # Patch the attention functions to support head-wise compression
@@ -87,6 +88,7 @@ __all__ = [
     "ObservedAttentionFairEvictionPress",
     "SnapKVSystemPromptPress",
     "SnapKVFairEvictionPress",
+    "SnapKVLLMInterpolatePress",
     "StreamingLLMSystemPromptPress",
     "StreamingLLMFairEvictionPress",
     "StreamingLLMInterpolatePress",

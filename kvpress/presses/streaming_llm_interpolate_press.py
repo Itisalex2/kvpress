@@ -79,7 +79,6 @@ class StreamingLLMInterpolatePress(StreamingLLMPress):
             f"Input should contain more tokens than n_sink={self.n_sink}"
         )
         n_kept = int(q_len * (1 - self.compression_ratio))
-        assert 0.0 <= self.interpolation_lambda <= 1.0
 
         spans = self.get_spans(q_len)
         earlier_span_start = spans["earlier_span_start"]
